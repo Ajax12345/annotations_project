@@ -1,0 +1,12 @@
+<View>
+  <Text name="text" value="$url"/>
+  <Text name="url" value="$text"/>
+  <View style="box-shadow: 2px 2px 5px #999;                padding: 20px; margin-top: 2em;                border-radius: 5px;">
+    <Header value="Choose page category"/>
+    <Choices name="sentiment" toName="text" choice="single" showInLine="true">
+      
+    <Choice value="Product/Feature" hotkey="1"/>
+    <Choice value="About" hotkey="2"/>
+    </Choices>
+  </View>
+</View>

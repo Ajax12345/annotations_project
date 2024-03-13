@@ -55,7 +55,7 @@ def scrape_text(src:str, url:str) -> dict:
     d = collections.defaultdict(list)
     for t in ['nav', 'footer']:
         for i in soup(src, 'html.parser').select(f'{t} a'):
-            d[t].append(text:=i.get_text(strip=True))
+            d[t].append([urllib.parse.urljoin(url, i.attrs.get('href','')), (text:=i.get_text(strip=True))])
             for j in ['team', 'about', 'about us', 'people', 'leadership']:
                 if j in text.lower() and 'href' in i.attrs:
                     d[j].append(urllib.parse.urljoin(url, i['href']))
@@ -82,11 +82,11 @@ async def crawl_companies() -> None:
                     continue
 
                 d = scrape_text(page, url)
-                with open('nav_footers.csv', 'a') as f:
+                with open('nav_footers_updated.csv', 'a') as f:
                     write = csv.writer(f)
                     result = 0
                     for i in ['nav', 'footer']:
-                        write.writerows(k:={(url, i, j) for j in d.get(i, []) if j})
+                        write.writerows(k:={(_url, i, j) for _url, j in d.get(i, []) if j})
                         result = result or k
 
                     
@@ -102,7 +102,7 @@ async def crawl_companies() -> None:
                 if page is None:
                     continue
 
-                with open('about_data.csv', 'a') as f:
+                with open('about_data_updated.csv', 'a') as f:
                     write = csv.writer(f)
                     write.writerows([[url, i] for i in traverse_src(soup(page, 'html.parser'))])
 
@@ -110,3 +110,27 @@ async def crawl_companies() -> None:
 
 if __name__ == '__main__':
     asyncio.run(crawl_companies())
+    '''
+    #asyncio.run(crawl_companies())
+    d = soup(requests.get('https://www.velocityautomotive.com/').text, 'html.parser').select_one('nav')
+    #print(d)
+    #print([*to_levels(d)])
+    #print([(a, b) for a, b in to_levels(d) if b.rstrip().lstrip()])
+    print(json.dumps(get_tree([(a, b) for a, b in to_levels(d) if b.rstrip().lstrip()]), indent=4))
+    '''
+    '''
+    with open('about_data.csv') as f:
+        data = [*csv.reader(f)]
+        with open('about_data_1.csv', 'a') as f1:
+            write= csv.writer(f1)
+            write.writerows([i for _, *i in data])
+
+    with open('nav_footers.csv') as f:
+        data = csv.reader(f)
+        with open('nav_footers_1.csv', 'a') as f1:
+            write= csv.writer(f1)
+            write.writerows([i for _, _, *i in data])
+
+    '''
+
+    

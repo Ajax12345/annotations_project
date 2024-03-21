@@ -109,7 +109,7 @@ async def crawl_companies() -> None:
 
 
 if __name__ == '__main__':
-    asyncio.run(crawl_companies())
+    #asyncio.run(crawl_companies())
     '''
     #asyncio.run(crawl_companies())
     d = soup(requests.get('https://www.velocityautomotive.com/').text, 'html.parser').select_one('nav')
@@ -132,5 +132,15 @@ if __name__ == '__main__':
             write.writerows([i for _, _, *i in data])
 
     '''
+
+    import random
+
+    with open('first_dataset_nav.csv') as f, open('first_dataset_about.csv') as f1, open('merged_datasets.csv', 'w') as f2:
+        _, *d1 = csv.reader(f)
+        _, *d2 = csv.reader(f1)
+        merged = [[i[0], 1, i[-1]] for i in d1]+[[a, 0, b] for a, b in d2]
+        random.shuffle(merged)
+        write = csv.writer(f2)
+        write.writerows([['url', 'homepage', 'text'], *merged])
 
     

@@ -7,6 +7,7 @@
       
     <Choice value="Product/Feature" hotkey="1"/>
     <Choice value="About" hotkey="2"/>
+    <Choice value="Neither" hotkey="3"/>
     </Choices>
   </View>
 </View>

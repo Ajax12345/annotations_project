@@ -5,6 +5,15 @@ import torch.optim as optimizer
 import sentence_transformers
 
 class SpiderModels:
+    '''
+    Useful links for the embeddings:
+        https://huggingface.co/BAAI/bge-small-en-v1.5
+        https://huggingface.co/spaces/mteb/leaderboard
+        https://github.com/FlagOpen/FlagEmbedding/tree/master#model-list
+    
+    Required pip install for embeddings:
+        pip install -U sentence-transformers
+    '''
     def __init__(self) -> None:
         self.embedding_model = None
     

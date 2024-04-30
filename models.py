@@ -28,6 +28,7 @@ class SpiderData:
         assert all(len({tuple(j[:-1]) for j in i}) == 1 for i in zip(*[b for _, b in transformed]))
         classes = dict(enumerate(sorted({c for _, b in transformed for *_, c in b})))
         return classes
+
         
 class SpiderModels:
     '''

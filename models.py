@@ -48,7 +48,7 @@ class SpiderData:
         assert all(len({tuple(j[:-1]) for j in i}) == 1 for i in zip(*[b for _, b in transformed]))
         classes = dict(enumerate(sorted({c for _, b in transformed for *_, c in b})))
         _classes = {b:a for a, b in classes.items()}
-        return cls.iaa_fleiss(_classes, data:=[b for _, b in transformed]), _classes, data
+        return cls.iaa_fleiss(_classes, data:=[b for _, b in transformed]), _classes, transformed
 
 
 class SpiderModels:
@@ -79,3 +79,6 @@ if __name__ == '__main__':
     '''
 
     fleiss, classes, data = SpiderData.load_data()
+    print('Fliess Kappa:', fleiss)
+    print('Classes', classes)
+    

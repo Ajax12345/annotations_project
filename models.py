@@ -3,14 +3,34 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optimizer
 import sentence_transformers
-import json, os
+import json, os, collections
 
 class SpiderData:
     '''
     Observations:
         - each annotator labeled all 200 rows assigned to them
-
+        - number of sentences in each dataset: 200
+        - unique labels: ['About', 'Bio', 'Neither', 'Product/Feature', 'Title/role']
+        - label span counts from aggregated datasets: {'About': 64, 'Bio': 75, 'Neither': 355, 'Product/Feature': 223, 'Title/role': 83}
+        - Fleiss Kappa: 0.52
     '''
+    @classmethod
+    def iaa_fleiss(cls, classes:dict, data:typing.List[list]) -> float:
+        #https://datatab.net/tutorial/fleiss-kappa
+        tbl = [collections.Counter([j[-1] for j in i]) for i in zip(*data)]
+        tbl = [{cl:j.get(cl, 0) for cl in classes} for j in tbl]
+        ct = collections.defaultdict(int)
+        njk = 0
+        for row in tbl:
+            for cl in classes:
+                ct[cl] += row[cl]
+                njk += row[cl]**2
+
+        s_ct = sum(ct.values())
+        P_e = sum(pow(i/s_ct, 2) for i in ct.values())
+        P_o = (1/(len(tbl)*4*3)) * (njk - len(tbl) * 4)
+        return (P_o - P_e)/(1 - P_e)
+
     @classmethod
     def load_data(cls, data_folder:str = 'other_group_annotations') -> typing.Any:
         d = {}
@@ -27,9 +47,10 @@ class SpiderData:
 
         assert all(len({tuple(j[:-1]) for j in i}) == 1 for i in zip(*[b for _, b in transformed]))
         classes = dict(enumerate(sorted({c for _, b in transformed for *_, c in b})))
-        return classes
+        _classes = {b:a for a, b in classes.items()}
+        return cls.iaa_fleiss(_classes, data:=[b for _, b in transformed]), _classes, data
 
-        
+
 class SpiderModels:
     '''
     Useful links for the embeddings:
@@ -57,4 +78,4 @@ if __name__ == '__main__':
     print(s.get_embeddings(['about', 'product', 'our solutions']))
     '''
 
-    print(SpiderData.load_data())
+    fleiss, classes, data = SpiderData.load_data()

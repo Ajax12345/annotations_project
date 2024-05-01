@@ -85,7 +85,7 @@ class SpiderModels:
 
 
 def prepare_data(data):
-    *_, texts, labels = zip(*data[0][1])
+    *_, texts, labels = zip(*data[2][1])
     label_encoder = LabelEncoder()
     numeric_labels = label_encoder.fit_transform(labels)
     embedded_texts = s.get_embeddings(texts)

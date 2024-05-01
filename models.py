@@ -77,8 +77,12 @@ if __name__ == '__main__':
     s.load_embedding_model()
     print(s.get_embeddings(['about', 'product', 'our solutions']))
     '''
+    s = SpiderModels()
+    s.load_embedding_model()
 
     fleiss, classes, data = SpiderData.load_data()
-    print('Fliess Kappa:', fleiss)
     print('Classes', classes)
-    
+    *_, text, labels = zip(*data[0][1])
+    embedded_text = s.get_embeddings(text)
+    print(embedded_text)
+    print('length of embedding array:', len(embedded_text[0]))

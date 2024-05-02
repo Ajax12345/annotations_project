@@ -212,15 +212,15 @@ if __name__ == '__main__':
     embedded_text, numeric_labels, label_encoder = prepare_data(data)
     X_train, X_test, y_train, y_test = split_data(embedded_text, numeric_labels)
 
-    # """Naive Bayes"""
-    # naive_bayes_config = config['models']['naive_bayes']
-    # naive_bayes = train_model(naive_bayes_config, X_train, y_train)
-    # evaluate_model(naive_bayes_config, naive_bayes, X_test, y_test, label_encoder)
-    #
-    # """Random Forest"""
-    # random_forest_config = config['models']['random_forest']
-    # random_forest = train_model(random_forest_config, X_train, y_train)
-    # evaluate_model(random_forest_config, random_forest, X_test, y_test, label_encoder)
+    """Naive Bayes"""
+    naive_bayes_config = config['models']['naive_bayes']
+    naive_bayes = train_model(naive_bayes_config, X_train, y_train)
+    evaluate_model(naive_bayes_config, naive_bayes, X_test, y_test, label_encoder)
+
+    """Random Forest"""
+    random_forest_config = config['models']['random_forest']
+    random_forest = train_model(random_forest_config, X_train, y_train)
+    evaluate_model(random_forest_config, random_forest, X_test, y_test, label_encoder)
 
     """RoBERTa"""
     roberta_config = config['models']['roberta']

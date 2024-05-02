@@ -1,0 +1,27 @@
+models:
+  roberta:
+    model_type: "roberta-base"
+    model_parameters:
+      epochs: 10
+      learning_rate: 0.00005
+    data_parameters:
+      batch_size: 16
+      shuffle: true
+
+  random_forest:
+    model_type: "RandomForestClassifier"
+    model_parameters:
+      n_estimators: 100
+      max_depth: None
+      random_state: 42
+    data_parameters:
+      batch_size: 32
+      shuffle: true
+
+  naive_bayes:
+    model_type: "GaussianNB"
+    model_parameters:
+      priors: null
+    data_parameters:
+      batch_size: 32
+      shuffle: true

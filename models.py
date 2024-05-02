@@ -124,7 +124,7 @@ def evaluate_model(config, model, X_test, y_test, label_encoder):
 
 
 def roberta(config,data):
-    *_, texts, labels = zip(*data[0][1])
+    *_, texts, labels = zip(*data[2][1])
 
     c = RobertaConfig.from_pretrained('roberta-base')
     c.num_labels = 5
@@ -136,26 +136,30 @@ def roberta(config,data):
 
     label_mapping = {"Neither": 0, "Product/Feature": 1, "Title/role": 2, "Bio": 3, "About": 4}
     numeric_labels = [label_mapping[label] for label in labels]
-
     inputs = tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
+    attention_masks = inputs['attention_mask']
     inputs['labels'] = torch.tensor(numeric_labels)
 
-    train_inputs, val_inputs, train_labels, val_labels = train_test_split(inputs['input_ids'], inputs['labels'],
-                                                                          test_size=0.2)
+    train_inputs, val_inputs, train_labels, val_labels, train_masks, val_masks = train_test_split(
+        inputs['input_ids'],
+        inputs['labels'],
+        attention_masks,
+        test_size=0.2
+    )
 
-    train_data = torch.utils.data.TensorDataset(train_inputs, train_labels)
-    val_data = torch.utils.data.TensorDataset(val_inputs, val_labels)
+    train_data = torch.utils.data.TensorDataset(train_inputs, train_labels, train_masks)
+    val_data = torch.utils.data.TensorDataset(val_inputs, val_labels, val_masks)
+
     train_loader = DataLoader(train_data, batch_size=config['data_parameters']['batch_size'])
     val_loader = DataLoader(val_data, batch_size=config['data_parameters']['batch_size'])
-
-    optimizer = AdamW(model.parameters(), lr=config['model_parameters']['learning_rate'])
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config['model_parameters']['learning_rate'])
 
     for epoch in range(config['model_parameters']['epochs']):
         print('Epoch {}'.format(epoch + 1,))
         model.train()
         for batch in train_loader:
             optimizer.zero_grad()
-            outputs = model(batch[0], labels=batch[1])
+            outputs = model(batch[0], attention_mask=batch[2], labels=batch[1])
             loss = outputs.loss
             loss.backward()
             optimizer.step()
@@ -163,7 +167,7 @@ def roberta(config,data):
         model.eval()
         for batch in val_loader:
             with torch.no_grad():
-                outputs = model(batch[0], labels=batch[1])
+                outputs = model(batch[0], attention_mask=batch[2], labels=batch[1])
                 val_loss = outputs.loss
     return model, val_loader
 
@@ -175,7 +179,7 @@ def roberta_evaluate(config, model, dataloader):
 
     for batch in dataloader:
         with torch.no_grad():
-            outputs = model(batch[0])
+            outputs = model(batch[0], attention_mask=batch[2])
             logits = outputs.logits
             predictions.extend(np.argmax(logits.detach().numpy(), axis=1).flatten())
             true_labels.extend(batch[1].numpy().flatten())
@@ -212,7 +216,7 @@ if __name__ == '__main__':
     # naive_bayes_config = config['models']['naive_bayes']
     # naive_bayes = train_model(naive_bayes_config, X_train, y_train)
     # evaluate_model(naive_bayes_config, naive_bayes, X_test, y_test, label_encoder)
-
+    #
     # """Random Forest"""
     # random_forest_config = config['models']['random_forest']
     # random_forest = train_model(random_forest_config, X_train, y_train)

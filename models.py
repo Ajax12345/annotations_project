@@ -11,7 +11,7 @@ from transformers import RobertaForSequenceClassification, RobertaTokenizer, Ada
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import numpy as np
-import yaml
+import yaml, random
 from transformers import RobertaConfig
 
 
@@ -22,6 +22,7 @@ class SpiderData:
         - number of sentences in each dataset: 200
         - unique labels: ['About', 'Bio', 'Neither', 'Product/Feature', 'Title/role']
         - label span counts from aggregated datasets: {'About': 64, 'Bio': 75, 'Neither': 355, 'Product/Feature': 223, 'Title/role': 83}
+        - label span counts from final dataset (after majority votes and augmentation): {'Neither': 107, 'Bio': 50, 'About': 22, 'Product/Feature': 74, 'Title/role': 35}
         - Fleiss Kappa: 0.52
     '''
 
@@ -83,9 +84,28 @@ class SpiderModels:
         embeddings = self.embedding_model.encode(text, normalize_embeddings=True)
         return torch.tensor(embeddings) if as_tensor else embeddings
 
+def compute_class_freq(data):
+    d = collections.defaultdict(int)
+    for i in data:
+        d[i[-1]] += 1
+
+    return d
 
 def prepare_data(data):
-    *_, texts, labels = zip(*data[2][1])
+    '''majority votes merge'''
+    data = [[*i[0][:-1], max(c:=collections.Counter([t[-1] for t in i]), key=lambda x:c[x])] for i in zip(*[b for _, b in data])]
+    print(data[0])
+
+    print('freq before augmentation', compute_class_freq(data))
+
+    with open('ground_truth_datasets/JamesSupplementary.json') as f:
+        sup = [['', '', j['data']['text'], t] for j in json.load(f) if j['annotations'][0]['result'] and (t:=j['annotations'][0]['result'][0]['value']['choices'][0]) != 'Neither']
+        data.extend(sup)
+
+    print('freq after augmentation', compute_class_freq(data))
+    random.shuffle(data)
+
+    *_, texts, labels = zip(*data)
     label_encoder = LabelEncoder()
     numeric_labels = label_encoder.fit_transform(labels)
     embedded_texts = s.get_embeddings(texts)
@@ -204,12 +224,14 @@ if __name__ == '__main__':
     s = SpiderModels()
     s.load_embedding_model()
 
-    config = load_config('config.yaml')
 
     fleiss, classes, data = SpiderData.load_data()
+
+    config = load_config('config.yaml')
     print('Classes:', classes)
 
     embedded_text, numeric_labels, label_encoder = prepare_data(data)
+
     X_train, X_test, y_train, y_test = split_data(embedded_text, numeric_labels)
 
     """Naive Bayes"""
@@ -226,3 +248,4 @@ if __name__ == '__main__':
     roberta_config = config['models']['roberta']
     roberta_model, val_loader = roberta(roberta_config,data)
     roberta_evaluate(roberta_config, roberta_model, val_loader)
+    

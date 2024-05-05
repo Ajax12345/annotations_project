@@ -24,6 +24,9 @@ class SpiderData:
         - label span counts from aggregated datasets: {'About': 64, 'Bio': 75, 'Neither': 355, 'Product/Feature': 223, 'Title/role': 83}
         - label span counts from final dataset (after majority votes and augmentation): {'Neither': 107, 'Bio': 50, 'About': 22, 'Product/Feature': 74, 'Title/role': 35}
         - Fleiss Kappa: 0.52
+        - [{'model': 'GaussianNB', 'accuracy': 0.7758620689655172}, 
+            {'model': 'RandomForestClassifier', 'accuracy': 0.7758620689655172}, 
+            {'model': 'roberta-base', 'accuracy': 0.8}]
     '''
 
     @classmethod
@@ -127,11 +130,12 @@ def train_model(config, X_train, y_train):
     return model
 
 
-def evaluate_model(config, model, X_test, y_test, label_encoder):
+def evaluate_model(config, model, X_test, y_test, label_encoder, param_storage):
     model_type = config['model_type']
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     print("Accuracy:", accuracy)
+    param_storage.append({'model':model_type, 'accuracy':accuracy})
     print("\nClassification Report:\n", classification_report(y_test, y_pred, target_names=label_encoder.classes_))
     cm = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(10, 7))
@@ -143,7 +147,7 @@ def evaluate_model(config, model, X_test, y_test, label_encoder):
     plt.savefig(model_type + ' confusion_matrix.png')
 
 
-def roberta(config,data):
+def roberta(config,data, param_storage):
     *_, texts, labels = zip(*data[2][1])
 
     c = RobertaConfig.from_pretrained('roberta-base')
@@ -173,26 +177,33 @@ def roberta(config,data):
     train_loader = DataLoader(train_data, batch_size=config['data_parameters']['batch_size'])
     val_loader = DataLoader(val_data, batch_size=config['data_parameters']['batch_size'])
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['model_parameters']['learning_rate'])
-
+    full_losses = []
     for epoch in range(config['model_parameters']['epochs']):
         print('Epoch {}'.format(epoch + 1,))
         model.train()
+        losses = []
         for batch in train_loader:
             optimizer.zero_grad()
             outputs = model(batch[0], attention_mask=batch[2], labels=batch[1])
             loss = outputs.loss
+            losses.append(loss.item())
             loss.backward()
             optimizer.step()
+
+        full_losses.append(losses)
 
         model.eval()
         for batch in val_loader:
             with torch.no_grad():
                 outputs = model(batch[0], attention_mask=batch[2], labels=batch[1])
                 val_loss = outputs.loss
+
+    param_storage.append(full_losses)
+
     return model, val_loader
 
 
-def roberta_evaluate(config, model, dataloader):
+def roberta_evaluate(config, model, dataloader, param_storage):
     model_type = config['model_type']
     model.eval()
     predictions, true_labels = [], []
@@ -204,7 +215,10 @@ def roberta_evaluate(config, model, dataloader):
             predictions.extend(np.argmax(logits.detach().numpy(), axis=1).flatten())
             true_labels.extend(batch[1].numpy().flatten())
 
-    print('Accuracy:', accuracy_score(true_labels, predictions))
+    
+    print('Accuracy:', ac:=accuracy_score(true_labels, predictions))
+    param_storage.append({'model':model_type, 'accuracy':ac})
+
     print('\nClassification Report:\n', classification_report(true_labels, predictions))
     cm = confusion_matrix(true_labels, predictions)
     plt.figure(figsize=(10, 7))
@@ -230,6 +244,8 @@ if __name__ == '__main__':
     config = load_config('config.yaml')
     print('Classes:', classes)
 
+    param_storage = []
+
     embedded_text, numeric_labels, label_encoder = prepare_data(data)
 
     X_train, X_test, y_train, y_test = split_data(embedded_text, numeric_labels)
@@ -237,15 +253,19 @@ if __name__ == '__main__':
     """Naive Bayes"""
     naive_bayes_config = config['models']['naive_bayes']
     naive_bayes = train_model(naive_bayes_config, X_train, y_train)
-    evaluate_model(naive_bayes_config, naive_bayes, X_test, y_test, label_encoder)
+    evaluate_model(naive_bayes_config, naive_bayes, X_test, y_test, label_encoder, param_storage)
 
     """Random Forest"""
     random_forest_config = config['models']['random_forest']
     random_forest = train_model(random_forest_config, X_train, y_train)
-    evaluate_model(random_forest_config, random_forest, X_test, y_test, label_encoder)
+    evaluate_model(random_forest_config, random_forest, X_test, y_test, label_encoder, param_storage)
 
     """RoBERTa"""
     roberta_config = config['models']['roberta']
-    roberta_model, val_loader = roberta(roberta_config,data)
-    roberta_evaluate(roberta_config, roberta_model, val_loader)
+    roberta_model, val_loader = roberta(roberta_config,data, param_storage)
+    roberta_evaluate(roberta_config, roberta_model, val_loader, param_storage)
+
+    with open('model_results.json', 'w') as f:
+        print(param_storage)
+        json.dump(param_storage, f)
     

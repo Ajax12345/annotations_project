@@ -22,6 +22,7 @@ class SpiderData:
         - number of sentences in each dataset: 200
         - unique labels: ['About', 'Bio', 'Neither', 'Product/Feature', 'Title/role']
         - label span counts from aggregated datasets: {'About': 64, 'Bio': 75, 'Neither': 355, 'Product/Feature': 223, 'Title/role': 83}
+        - label span counts from the final dataset (after majority votes but before augmentation): {'Neither': 107, 'Bio': 17, 'About': 6, 'Product/Feature': 55, 'Title/role': 15}
         - label span counts from final dataset (after majority votes and augmentation): {'Neither': 107, 'Bio': 50, 'About': 22, 'Product/Feature': 74, 'Title/role': 35}
         - Fleiss Kappa: 0.52
         - [{'model': 'GaussianNB', 'accuracy': 0.7758620689655172}, 

@@ -11,7 +11,7 @@ from transformers import RobertaForSequenceClassification, RobertaTokenizer, Ada
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import numpy as np
-import yaml, random
+import yaml, random, csv
 from transformers import RobertaConfig
 
 
@@ -106,6 +106,10 @@ def prepare_data(data):
         sup = [['', '', j['data']['text'], t] for j in json.load(f) if j['annotations'][0]['result'] and (t:=j['annotations'][0]['result'][0]['value']['choices'][0]) != 'Neither']
         data.extend(sup)
 
+    with open('Final_dataset/final_dataset.csv', 'a') as f:
+        write = csv.writer(f)
+        write.writerows(data)
+
     print('freq after augmentation', compute_class_freq(data))
     random.shuffle(data)
 
@@ -113,7 +117,7 @@ def prepare_data(data):
     label_encoder = LabelEncoder()
     numeric_labels = label_encoder.fit_transform(labels)
     embedded_texts = s.get_embeddings(texts)
-    return embedded_texts, numeric_labels, label_encoder
+    return data, embedded_texts, numeric_labels, label_encoder
 
 
 def split_data(embedded_texts, numeric_labels):
@@ -149,7 +153,7 @@ def evaluate_model(config, model, X_test, y_test, label_encoder, param_storage):
 
 
 def roberta(config,data, param_storage):
-    *_, texts, labels = zip(*data[2][1])
+    *_, texts, labels = zip(*data)
 
     c = RobertaConfig.from_pretrained('roberta-base')
     c.num_labels = 5
@@ -247,7 +251,7 @@ if __name__ == '__main__':
 
     param_storage = []
 
-    embedded_text, numeric_labels, label_encoder = prepare_data(data)
+    aug_data, embedded_text, numeric_labels, label_encoder = prepare_data(data)
 
     X_train, X_test, y_train, y_test = split_data(embedded_text, numeric_labels)
 
@@ -263,10 +267,13 @@ if __name__ == '__main__':
 
     """RoBERTa"""
     roberta_config = config['models']['roberta']
-    roberta_model, val_loader = roberta(roberta_config,data, param_storage)
+    roberta_model, val_loader = roberta(roberta_config, aug_data, param_storage)
     roberta_evaluate(roberta_config, roberta_model, val_loader, param_storage)
 
     with open('model_results.json', 'w') as f:
         print(param_storage)
         json.dump(param_storage, f)
     
+
+def f(d):
+    print('\n'.join('\\textit{'+a+'} & ' + str(b) + ' & '+ str(b*100/sum(d.values())) + '\% \\\\' for a, b in d.items()))
